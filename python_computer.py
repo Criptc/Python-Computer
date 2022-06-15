@@ -1,19 +1,31 @@
 import socket
 import threading
-from time import sleep
+from time import sleep, time as tim
 
-global Memory, Storage, MemoryPostion, time, Register
+global Memory, Storage, MemoryPostion, time, Register, End
 Memory = ['~' for x in range(1000)]
 Storage = ['~' for x in range(10000)]
 Register = [['~' for x in range(50)] for x in range(2)]
 MemoryPostion = 0
 time = 0
+End = False
 
 def Clock():
     while True:
         sleep(0.1)
-        global time
+        global time, End
+        if End:
+            break
         time = round(time + 0.1, 1)
+
+def TimeClock():
+    while True:
+        sleep(1)
+        global End
+        if End:
+            break
+        clck = round(tim()) + 436117077146035980
+        StoreStorage('0x3', clck, System=True)
 
 def asciiit(var):
 	out=''
@@ -212,6 +224,23 @@ def RandomBool():
     else:
         return '1'
 
+def schedule(function, time, argument = ''):
+    argument = list(argument)
+    if '' in argument: argument.remove('')
+    while True:
+        sleep(0.5)
+        print(ReadStorage('0x3'), time)
+        if ReadStorage('0x3') >= time:
+            if argument == ['']:
+                function()
+            else:
+                if len(argument) == 1:
+                    function(argument.pop(0))
+                    break
+                elif len(argument) == 2:
+                    function(argument.pop(0), argument.pop(0))
+                    break
+
 def Compiler(Data):
     if 'mov ' in Data:
         Data = Data.replace('mov ', '')
@@ -223,6 +252,16 @@ def Compiler(Data):
             Data = ''.join(Data[:1])
             StoreStorage(Postion, Data)
 
+ClockThread = threading.Thread(target=Clock)
+TimeClockThread = threading.Thread(target=TimeClock)
+ClockThread.start()
+TimeClockThread.start()
+sleep(2)
+
+Tim = ReadStorage('0x3')
+GPU(Tim)
+schedule(ReadStorage, int(Tim) + 3, argument = ('0x3'))
+sleep(3)
+End = True
 
 
-                                                                                                                                                                                                                                                                                                         
