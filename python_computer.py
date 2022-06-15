@@ -226,11 +226,11 @@ def RandomBool():
 
 def schedule(function, time, argument = ''):
     argument = list(argument)
+    time = int(time)
     if '' in argument: argument.remove('')
     while True:
         sleep(0.5)
-        print(ReadStorage('0x3'), time)
-        if ReadStorage('0x3') >= time:
+        if int(ReadStorage('0x3')) >= time:
             if argument == ['']:
                 function()
             else:
@@ -240,6 +240,7 @@ def schedule(function, time, argument = ''):
                 elif len(argument) == 2:
                     function(argument.pop(0), argument.pop(0))
                     break
+                break
 
 def Compiler(Data):
     if 'mov ' in Data:
@@ -258,10 +259,16 @@ ClockThread.start()
 TimeClockThread.start()
 sleep(2)
 
+
+
+'''
+#scheduler Test
 Tim = ReadStorage('0x3')
 GPU(Tim)
-schedule(ReadStorage, int(Tim) + 3, argument = ('0x3'))
-sleep(3)
+schedule(StoreStorage, int(Tim) + 3, argument = ('0x5', 'test'))
+sleep(5)
+ReadStorage('0x5')
+sleep(0.2)
 End = True
-
+'''
 
