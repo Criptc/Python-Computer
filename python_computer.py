@@ -2,10 +2,10 @@ import socket
 import threading
 from time import sleep
 
-global Memory, Storage, StoragePostion, MemoryPostion, time, Register
-Memory = ['!' for x in range(1000)]
-Storage = [0 for x in range(1000000)]
-Register = [[0 for x in range(50)] for x in range(2)]
+global Memory, Storage, MemoryPostion, time, Register
+Memory = ['~' for x in range(1000)]
+Storage = ['~' for x in range(10000)]
+Register = [['~' for x in range(50)] for x in range(2)]
 MemoryPostion = 0
 time = 0
 
@@ -28,14 +28,16 @@ def unasciiit(var):
 	for i in range(len(var)):il=i+1;out=out+str(chr(int(''.join(var[i:il]))))
 	return out
 
-def StoreMemory(data, StartAddress):
+def StoreMemory(data):
     global MemoryPostion, Memory
+    StartAddress = MemoryPostion + 1
     for i in data:
         MemoryPostion = MemoryPostion + 1
         letter = '0x' + asciiit(i)
         Memory[MemoryPostion] = letter
     EndAddress = MemoryPostion
     return '0x' + str(StartAddress), '0x' + str(EndAddress)
+
 
 def ReadMemory(StartAddress, EndAddress):
     StartAddress = int(StartAddress.replace('0x', ''))
@@ -46,80 +48,181 @@ def ReadMemory(StartAddress, EndAddress):
         for i in range(EndAddress - StartAddress + 1):
             Output = Output + unasciiit(Memory[StartAddress + i].replace('0x', ''))
     except:
-        DumpMemory()
         raise Exception('Unassined memory accessed')
     return Output
 
-def StoreStorage(Postion, Data):
+def StoreStorage(Postion, Data, System = False):
     global Storage
     Postion = int(Postion.replace('0x', ''))
-    Storage[Postion] = Data
+    if System:
+        Storage[Postion] = Data
+    else:
+        if Postion <= 4:
+            print(f'Error: postions 0x0 through 0x5 reserved for system. Postion: {Postion}')
+        else:
+            Storage[Postion] = Data
 
 def ReadStorage(Postion):
     global Storage
     Postion = int(Postion.replace('0x', ''))
     return Storage[Postion]
 
+def DumpRegisters():
+    global Register
+    RegisterData = ' '.join(Register).replace('~', '').replace('  ', '')
+    StoreStorage('0x0', RegisterData, System=True)
+    Register = ['~' for x in range(8)]
+
 def DumpMemory():
     global Memory
-    mem = Memory = [str(x) for x in Memory]
-    data = ''.join(mem)
-    data = data.replace('0x', ' ')
-    data = data.replace('!', '')
-    print(f'dumping {len(data)} bits of memory')
-    print(data)
+    MemoryData = ' '.join(Memory).replace('~', '').replace('  ', '')
+    StoreStorage('0x1', MemoryData, System=True)
+    Memory = ['~' for x in range(200)]
 
-def CPU(instructions):
-    i = instructions
-    global Register
-    if 'pt ass ' in i:
-        i = i.replace('pt ass ', '')
-        i = i.split('0x')
-        A = ''.join(i[:1])
-        B = ''.join(i[1:2])
-        StoreStorage(B, A)
-    elif 'pt sad ' in i:
-        i = i.replace('pt sad ', '')
-        i = i.split('0x')
-        a = ''.join(i[:1])
-        b = ''.join(i[1:2])
-        A, B = StoreMemory(a, b)
-        print(A, B)
-    elif 'rd ass ' in i:
-        i = i.replace('rd ass ', '')
-        Data = ReadStorage(i)
-        print(Data)
-    elif 'rd sad ' in i:
-        i = i.replace('rd sad ', '')
-        i = i.split(' ')
-        Start = ''.join(i[:1])
-        End = ''.join(i[1:2])
-        print(ReadMemory(Start, End))
-    elif i == 'time':
-        global time
-        print(time)
-    elif i == 'dmp sad':
-        DumpMemory()
-    elif i == 'help':
-        print('commands: ')
-        print('pt ass {data} {0xPostion} put data in the storage')
-        print('rd add {0xPostion} Read data that is in the supplied postion')
-        print('pt sad {data} {0xPostion} Put data in the memory in the supplied postion (overwriting causes issues)')
-        print('rd sad {0xStartPostion} {0xEndPostion} Read Memory between the start and end postions')
-        print('dmp sad Dump the current memory contents in hexadecimal')
-        print('time The time from starting (currently no other use)')
-        print('help Prints this message')
-    elif i == 'exit':
-        while True: exit(0)
+def DumpStorage():
+    global Storage
+    data = ' '.join(Storage)
+    data = data.replace('~', ' ')
+    data = data.replace('  ', '')
+    Storage = ['~' for x in range(10000)]
+    if data == '':
+        StoreStorage('0x2', '~', System=True)
     else:
-        print(f'Error: unknow command {i}')
-        exit(1)
-TimeThread = threading.Thread(target=Clock)
-TimeThread.start()
+        StoreStorage('0x2', data, System=True)
 
-while True:
-    inp = input('\\\\:')
-    CPU(inp)
+def GPU(Data):
+    print(Data)
+
+def ALU(operand, Data):
+    def add(Data):
+        Data = Data.split(' ')
+        a = ''.join(Data[:1])
+        b = ''.join(Data[1:2])
+        try:
+            a = int(a)
+            b = int(b)
+        except:
+            raise Exception(f'Data must be a number, not "{Data}"')
+        return a + b
+        
+    
+    def subtract(Data):
+        Data = Data.split(' ')
+        a = ''.join(Data[:1])
+        b = ''.join(Data[1:2])
+        try:
+            a = int(a)
+            b = int(b)
+        except:
+            raise Exception(f'Data must be a number, not "{Data}"')
+        return a - b
+    
+    def And(Data):
+        Data = Data.split(' ')
+        a = ''.join(Data[:1])
+        b = ''.join(Data[1:2])
+        if a == b:
+            return '1'
+        else:
+            return '0'
+    
+    def Or(Data):
+        if 'str' in str(type(Data)):
+            Data = Data.split(' ')
+            a = ''.join(Data[:1])
+            b = ''.join(Data[1:2])
+            if a == '1':
+                if b == '0':
+                    return '1'
+                else:
+                    return '1'
+            elif a == '0':
+                if b == '1':
+                    return '1'
+                else:
+                    return '0'
+        else:
+            raise Exception(f'Error: not type must be str not "{(str(type(Data)))}"')
+    
+    def Not(Data):
+        if 'str' in str(type(Data)):
+            if Data == '1':
+                return '0'
+            elif Data == '0':
+                return '1'
+            else:
+                raise Exception(f'Error: must be 1 or 0, not "{Data}"')
+        else:
+            raise Exception(f'Error: not type must be str not "{(str(type(Data)))}"')
+        
+    def xor(Data):
+        if 'str' in str(type(Data)):
+            Data = Data.split(' ')
+            a = ''.join(Data[:1])
+            b = ''.join(Data[1:2])
+            if a == '1':
+                if b == '0':
+                    return '1'
+                else:
+                    return '0'
+            elif a == '0':
+                if b == '1':
+                    return '1'
+                else:
+                    return '0'
+        else:
+            raise Exception(f'Error: not type must be str not "{(str(type(Data)))}"')
+    
+    if operand.lower() == 'add' or operand == '+':
+        return add(Data)
+    elif operand.lower() == 'subtract' or operand == '-':
+        return subtract(Data)
+    elif operand.lower() == 'and':
+        return And(Data)
+    elif operand.lower() == 'or':
+        return Or(Data)
+    elif operand.lower() == 'not':
+        return Not(Data)
+    elif operand.lower() == 'xor':
+        return xor(Data)
+    elif operand.lower() == 'nand':
+        return Not(And(Data))
+    elif operand.lower() == 'nor':
+        return Not(Or(Data))
+
+def Random():
+    first = True
+    RandomNumbers = []
+    while True:
+        if not first:
+            if random(0, 4) == 2:
+                break
+        RandomNumbers += str(random(random(0, 3), random(10, 100)))
+        if first:
+            first = False
+    return str(choice(RandomNumbers))
+
+def RandomBool():
+    a = Random()
+    b = Random()
+    c = ALU('add', a + ' ' + b)
+    d = ALU('subtract', str(c) + ' ' + str(Random()))
+    if d % 2:
+        return '0'
+    else:
+        return '1'
+
+def Compiler(Data):
+    if 'mov ' in Data:
+        Data = Data.replace('mov ', '')
+        if ' in ' in Data:
+            Data = Data.replace(' in ', '~')
+        if ', ssa' in Data:
+            Data = Data.replace(', ssa', '').split('~')
+            Postion = ''.join(Data[1:2])
+            Data = ''.join(Data[:1])
+            StoreStorage(Postion, Data)
 
 
-                                                                                                                                                                                                                                                                                                                              
+
+                                                                                                                                                                                                                                                                                                         
